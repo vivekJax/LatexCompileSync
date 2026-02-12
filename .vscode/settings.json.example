@@ -1,0 +1,25 @@
+{
+  "latex-workshop.latex.autoBuild.run": "onSave",
+  "latex-workshop.latex.rootDir": ".",
+  "latex-workshop.latex.mainFile": "main.tex",
+  "latex-workshop.latex.tools": [
+    {
+      "name": "build",
+      "command": "bash",
+      "args": ["%DIR%/scripts/build.sh"]
+    }
+  ],
+  "latex-workshop.latex.recipes": [
+    { "name": "Build", "tools": ["build"] }
+  ],
+  "latex-workshop.latex.recipe.default": "first",
+  "emeraldwalk.RunOnSave": {
+    "commands": [
+      {
+        "match": "\\.(tex|sty|bib)$",
+        "cmd": "workbench.action.tasks.runTask",
+        "args": ["Sync to Overleaf"]
+      }
+    ]
+  }
+}
