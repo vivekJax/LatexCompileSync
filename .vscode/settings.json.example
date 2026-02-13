@@ -1,4 +1,8 @@
 {
+  // =========================================================================
+  // OPTION A (recommended): LaTeX Workshop recipe chain.
+  // No extra extension needed — LaTeX Workshop runs build then sync on save.
+  // =========================================================================
   "latex-workshop.latex.autoBuild.run": "onSave",
   "latex-workshop.latex.rootDir": ".",
   "latex-workshop.latex.mainFile": "main.tex",
@@ -7,19 +11,42 @@
       "name": "build",
       "command": "bash",
       "args": ["%DIR%/scripts/build.sh"]
+    },
+    {
+      "name": "sync_to_overleaf",
+      "command": "bash",
+      "args": ["%DIR%/scripts/sync_to_overleaf.sh"]
     }
   ],
   "latex-workshop.latex.recipes": [
-    { "name": "Build", "tools": ["build"] }
+    { "name": "Build and Sync", "tools": ["build", "sync_to_overleaf"] }
   ],
-  "latex-workshop.latex.recipe.default": "first",
-  "emeraldwalk.RunOnSave": {
-    "commands": [
-      {
-        "match": "\\.(tex|sty|bib)$",
-        "cmd": "workbench.action.tasks.runTask",
-        "args": ["Sync to Overleaf"]
-      }
-    ]
-  }
+  "latex-workshop.latex.recipe.default": "first"
+
+  // =========================================================================
+  // OPTION B (alternative): Use the Run on Save extension (emeraldwalk).
+  // Install it from the VS Code / Cursor marketplace, then REPLACE the
+  // recipes block above with the build-only recipe and add this block:
+  //
+  //   "latex-workshop.latex.recipes": [
+  //     { "name": "Build", "tools": ["build"] }
+  //   ],
+  //   "emeraldwalk.runonsave": {
+  //     "commands": [
+  //       {
+  //         "match": "\\.(tex|sty|bib)$",
+  //         "cmd": "cd \"${workspaceFolder}\" && bash ./scripts/sync_to_overleaf.sh",
+  //         "isAsync": true,
+  //         "autoShowOutputPanel": "always"
+  //       }
+  //     ]
+  //   }
+  //
+  // IMPORTANT:
+  //   - The config key MUST be lowercase "emeraldwalk.runonsave" (not RunOnSave).
+  //   - The "cmd" runs a SHELL command (child_process.exec), NOT a VS Code
+  //     command. Do NOT use "workbench.action.tasks.runTask" here.
+  //   - "args" is NOT a supported property — put everything in "cmd".
+  //   - Paths with spaces must be quoted: cd "${workspaceFolder}" && bash ...
+  // =========================================================================
 }
