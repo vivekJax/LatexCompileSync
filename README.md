@@ -33,8 +33,8 @@ Setup is a one-time process: copy the scripts and example config into your proje
 
 Clone or download this repo, then copy the following into your LaTeX project folder:
 
-- The **contents** of `scripts/` → into your project’s `scripts/` folder (create it if needed).
-- The **contents** of `.vscode/` → into your project’s `.vscode/` folder (create it if needed).
+- The **contents** of `scripts/` → into your project's `scripts/` folder (create it if needed).
+- The **contents** of `.vscode/` → into your project's `.vscode/` folder (create it if needed).
 
 Your project should contain at least:
 
@@ -55,7 +55,7 @@ OVERLEAF_TOKEN=your_token_here
 
 **OVERLEAF_TOKEN** — In Overleaf, open your profile (top right) → **Account Settings** → **Git integration**. Generate a token and paste it as `OVERLEAF_TOKEN` in `.env`.
 
-Keep `.env` private: do not commit it to version control. Add `.env` to your project’s `.gitignore`.
+Keep `.env` private: do not commit it to version control. Add `.env` to your project's `.gitignore`.
 
 If your main file is not `main.tex`, add `MAIN_TEX=yourfile.tex` to `.env`. See [.env.example](.env.example) for other optional variables.
 
@@ -68,24 +68,26 @@ From your LaTeX project folder in a terminal:
 - Add the Overleaf project as the remote (replace with your project ID):  
   `git remote add origin https://git.overleaf.com/YOUR_PROJECT_ID`
 
+**Important:** Overleaf's default branch is `master`. If your local clone is also on `master`, set `OVERLEAF_BRANCH_LOCAL=master` in `.env` (the default is `main`).
+
 ### 4. Configure the editor
 
-1. **Extensions** — Install **LaTeX Workshop** (for building the PDF) and **Run on Save** (by emeraldwalk) so that saving can trigger the sync task.
+1. **Extension** — Install **LaTeX Workshop** (for building the PDF). No other extension is required; sync runs as part of the LaTeX Workshop build recipe.
 
-2. **Tasks and settings** — In your project’s `.vscode/` folder:
-   - Use [.vscode/tasks.json.example](.vscode/tasks.json.example) as the basis for `tasks.json` (or merge its tasks into your existing file).
-   - Merge the relevant keys from [.vscode/settings.json.example](.vscode/settings.json.example) into `settings.json`. Set `latex-workshop.latex.mainFile` to your main `.tex` file (e.g. `"main.tex"` or `"paper.tex"`).
+2. **Settings** — Copy [.vscode/settings.json.example](.vscode/settings.json.example) to `.vscode/settings.json` (or merge its keys into your existing file). Set `latex-workshop.latex.mainFile` to your main `.tex` file.
 
-3. **Script permissions** — In the project folder, run once:  
+3. **Tasks (optional)** — Copy [.vscode/tasks.json.example](.vscode/tasks.json.example) to `.vscode/tasks.json`. This lets you run **"Sync to Overleaf"** manually from the Command Palette (**Tasks: Run Task**).
+
+4. **Script permissions** — In the project folder, run once:  
    `chmod +x scripts/build.sh scripts/sync_to_overleaf.sh`
 
-After this, saving a `.tex`, `.sty`, or `.bib` file can run the **Sync to Overleaf** task; LaTeX Workshop can continue to build the PDF on save as before.
+After this, saving a `.tex`, `.sty`, or `.bib` file will build the PDF and then sync to Overleaf automatically.
 
 ### 5. Verify
 
 1. Open your main `.tex` file in VS Code or Cursor.
 2. Make a small edit and save (Ctrl+S / Cmd+S).
-3. Check the Terminal or Output panel for a message such as “Synced to Overleaf.”
+3. Check the **LaTeX Workshop** output panel for `[Overleaf sync] ✅ Done — Overleaf updated.`
 4. Refresh your Overleaf project in the browser and confirm the change appears.
 
 If you see errors about `OVERLEAF_TOKEN` or `OVERLEAF_PROJECT_ID`, verify the `.env` file and that the project ID and token are correct.
@@ -96,10 +98,12 @@ If you see errors about `OVERLEAF_TOKEN` or `OVERLEAF_PROJECT_ID`, verify the `.
 
 | Issue | What to check |
 |-------|----------------|
-| “OVERLEAF_TOKEN not set” or “OVERLEAF_PROJECT_ID not set” | Create `.env` in the project root with both variables (see step 2 above). |
-| “Push failed” | Confirm the project ID in `.env` matches the Overleaf project URL, and that the token is valid (regenerate in Overleaf if needed). |
+| `[Overleaf sync] ERROR: OVERLEAF_PROJECT_ID or OVERLEAF_TOKEN not set` | Create `.env` in the project root with both variables (see step 2 above). |
+| `[Overleaf sync] ❌ Push failed` | 1. Confirm the project ID in `.env` matches the Overleaf project URL. 2. Regenerate the token in Overleaf if it may have expired. 3. Check that Overleaf isn't rejecting the push due to invalid file paths (spaces/special chars in folder names). |
+| `failed to get: -50` or `could not read Username` | The macOS Keychain credential helper is intercepting the push. The current sync script disables this automatically — make sure you're using the latest version. |
 | PDF does not build | Ensure LaTeX is installed and `latex-workshop.latex.mainFile` in `.vscode/settings.json` points to your main `.tex` file. |
-| Sync does not run on save | Ensure the Run on Save extension is installed and that its command in `settings.json` runs the task **“Sync to Overleaf”**. |
+| Sync does not run on save | Verify that `.vscode/settings.json` has the **"Build and Sync"** recipe (see [settings.json.example](.vscode/settings.json.example)). Reload the window (`Cmd+Shift+P` → **Developer: Reload Window**) after changing settings. |
+| Overleaf rejects push with "invalid files" | A tracked file has characters Overleaf doesn't allow (e.g. folder names ending in a space). Add those paths to `.gitignore` so they're not staged. |
 
 ---
 
@@ -111,8 +115,8 @@ If you see errors about `OVERLEAF_TOKEN` or `OVERLEAF_PROJECT_ID`, verify the `.
 |----------------|------------------|
 | `scripts/build.sh` | `<project>/scripts/build.sh` |
 | `scripts/sync_to_overleaf.sh` | `<project>/scripts/sync_to_overleaf.sh` |
-| `.vscode/tasks.json.example` | `<project>/.vscode/tasks.json` (or merge) |
 | `.vscode/settings.json.example` | `<project>/.vscode/settings.json` (merge keys) |
+| `.vscode/tasks.json.example` | `<project>/.vscode/tasks.json` (optional, for manual sync task) |
 | `.env.example` | Use as template; create `<project>/.env` with your values |
 
 ### Environment variables (.env)
@@ -124,18 +128,17 @@ If you see errors about `OVERLEAF_TOKEN` or `OVERLEAF_PROJECT_ID`, verify the `.
 | `MAIN_TEX` | No | `main.tex` | Main `.tex` file to compile. |
 | `OUTPUT_PDF` | No | — | If set, copy the built PDF to this path. |
 | `TEX_ENGINE` | No | `xelatex` | LaTeX engine: `xelatex`, `pdflatex`, `lualatex`. |
-| `OVERLEAF_REMOTE` | No | `origin` | Git remote name for Overleaf. |
-| `OVERLEAF_BRANCH_LOCAL` | No | `main` | Local branch to push. |
+| `OVERLEAF_BRANCH_LOCAL` | No | `main` | Local branch to push. Set to `master` if cloned from Overleaf. |
 | `OVERLEAF_BRANCH_REMOTE` | No | `master` | Branch name on Overleaf. |
 
 ### Script behavior
 
 - **scripts/build.sh** — Runs from project root (parent of `scripts/`). Loads `.env`, compiles `MAIN_TEX` with `TEX_ENGINE` (two passes). If `OUTPUT_PDF` is set, copies the resulting PDF to that path. Exits with an error if the main file is missing or the build fails.
-- **scripts/sync_to_overleaf.sh** — Runs from project root. Loads `.env`. If the folder is not a Git repository, exits successfully without action. Otherwise stages all changes, commits with message “Auto-sync to Overleaf,” and pushes to the Overleaf remote using the configured branch names. The token is used only in the remote URL for the push and is then removed. Exits with an error if credentials are missing or the push fails.
+- **scripts/sync_to_overleaf.sh** — Runs from project root. Loads `.env`. If the folder is not a Git repository, exits successfully without action. Otherwise stages all changes (respecting `.gitignore`), commits with message "Auto-sync to Overleaf," and pushes to the Overleaf remote. The token is embedded directly in the push URL (never stored in `.git/config`). Exits with an error if credentials are missing or the push fails.
 
 ### Requirements
 
-Bash, Git, and a LaTeX distribution (e.g. TeX Live). For the automated workflow: VS Code or Cursor with the LaTeX Workshop and Run on Save extensions.
+Bash, Git, and a LaTeX distribution (e.g. TeX Live). For the automated workflow: VS Code or Cursor with the **LaTeX Workshop** extension.
 
 ---
 
