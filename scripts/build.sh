@@ -32,14 +32,22 @@ if [[ ! -f "$MAIN_TEX" ]]; then
   exit 1
 fi
 
-echo "Compiling LaTeX ($TEX_ENGINE): $MAIN_TEX"
-"$TEX_BIN" -interaction=nonstopmode "$MAIN_TEX" >/dev/null 2>&1
-"$TEX_BIN" -interaction=nonstopmode "$MAIN_TEX"
+# cd into the .tex file's directory so \input/\include relative paths resolve
+# and xelatex outputs the PDF next to the source file.
+TEX_DIR="$(dirname "$MAIN_TEX")"
+TEX_FILE="$(basename "$MAIN_TEX")"
+if [[ "$TEX_DIR" != "." ]]; then
+  cd "$TEX_DIR"
+fi
 
-BASE="${MAIN_TEX%.tex}"
+echo "Compiling LaTeX ($TEX_ENGINE): $MAIN_TEX"
+"$TEX_BIN" -interaction=nonstopmode "$TEX_FILE" >/dev/null 2>&1
+"$TEX_BIN" -interaction=nonstopmode "$TEX_FILE"
+
+BASE="${TEX_FILE%.tex}"
 if [[ -n "$OUTPUT_PDF" && -f "${BASE}.pdf" ]]; then
-  cp -f "${BASE}.pdf" "$OUTPUT_PDF"
-  echo "✅ PDF saved as $(pwd)/$OUTPUT_PDF"
+  cp -f "${BASE}.pdf" "$PROJECT_ROOT/$OUTPUT_PDF"
+  echo "✅ PDF saved as $PROJECT_ROOT/$OUTPUT_PDF"
 elif [[ -f "${BASE}.pdf" ]]; then
   echo "✅ PDF built: $(pwd)/${BASE}.pdf"
 else

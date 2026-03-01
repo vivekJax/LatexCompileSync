@@ -77,7 +77,7 @@ done
 if [[ -z "$MAIN_TEX" ]]; then
   while IFS= read -r -d '' f; do
     if grep -q '\\documentclass' "$f" 2>/dev/null; then
-      MAIN_TEX="$f"
+      MAIN_TEX="${f#./}"
       break
     fi
   done < <(find . -name "*.tex" -not -path "./.git/*" -print0 2>/dev/null | sort -z)
@@ -115,22 +115,15 @@ chmod +x scripts/build.sh scripts/sync_to_overleaf.sh
 # Create .env (never overwrite existing .env; append or create)
 # -----------------------------------------------------------------------------
 if [[ -f .env ]]; then
-  # Update or add Overleaf vars if missing
-  if ! grep -q '^OVERLEAF_PROJECT_ID=' .env 2>/dev/null; then
-    echo "" >> .env
-    echo "# LatexCompileSync (added by setup.sh)" >> .env
-    echo "OVERLEAF_PROJECT_ID=$PROJECT_ID" >> .env
-    echo "OVERLEAF_TOKEN=$OVERLEAF_TOKEN" >> .env
-    echo "MAIN_TEX=$MAIN_TEX" >> .env
-  else
-    # Update token and MAIN_TEX in place if we have sed
-    if command -v sed &>/dev/null; then
-      sed -i.bak "s|^OVERLEAF_PROJECT_ID=.*|OVERLEAF_PROJECT_ID=$PROJECT_ID|" .env
-      sed -i.bak "s|^OVERLEAF_TOKEN=.*|OVERLEAF_TOKEN=$OVERLEAF_TOKEN|" .env
-      sed -i.bak "s|^MAIN_TEX=.*|MAIN_TEX=$MAIN_TEX|" .env
-      rm -f .env.bak
+  # For each variable: update in place if the line exists, otherwise append
+  for pair in "OVERLEAF_PROJECT_ID=$PROJECT_ID" "OVERLEAF_TOKEN=$OVERLEAF_TOKEN" "MAIN_TEX=$MAIN_TEX"; do
+    varname="${pair%%=*}"
+    if grep -q "^${varname}=" .env 2>/dev/null; then
+      sed -i.bak "s|^${varname}=.*|${pair}|" .env && rm -f .env.bak
+    else
+      echo "$pair" >> .env
     fi
-  fi
+  done
   echo "[LatexCompileSync] Updated .env"
 else
   cat > .env << EOF
@@ -148,6 +141,7 @@ fi
 # -----------------------------------------------------------------------------
 GITIGNORE_ENTRIES=(
   ".env"
+  ".DS_Store"
   "*.aux"
   "*.bbl"
   "*.blg"
@@ -264,16 +258,22 @@ fi
 
 # Fetch and merge Overleaf content (master) so local has their files
 FETCH_URL="https://git:${OVERLEAF_TOKEN}@git.overleaf.com/${PROJECT_ID}"
-if GIT_TERMINAL_PROMPT=0 git -c credential.helper= fetch "$FETCH_URL" master 2>/dev/null; then
+if GIT_TERMINAL_PROMPT=0 git -c credential.helper= fetch "$FETCH_URL" master 2>&1; then
   if ! git rev-parse -q --verify HEAD &>/dev/null; then
-    # No commit yet: adopt Overleaf history
     git merge FETCH_HEAD --allow-unrelated-histories -m "Merge Overleaf project"
     echo "[LatexCompileSync] Merged existing Overleaf project into local repo."
   else
-    git merge FETCH_HEAD --allow-unrelated-histories -m "Merge Overleaf project" 2>/dev/null || true
+    if ! git merge FETCH_HEAD --allow-unrelated-histories -m "Merge Overleaf project" 2>&1; then
+      git merge --abort 2>/dev/null || true
+      echo "[LatexCompileSync] WARNING: Merge conflict with Overleaf content. Merge aborted."
+      echo "[LatexCompileSync] You can manually merge later: git fetch origin master && git merge FETCH_HEAD --allow-unrelated-histories"
+    else
+      echo "[LatexCompileSync] Merged existing Overleaf project into local repo."
+    fi
   fi
 else
-  echo "[LatexCompileSync] Could not fetch from Overleaf (empty project or network). You can push later with sync_to_overleaf.sh."
+  echo "[LatexCompileSync] Could not fetch from Overleaf (empty project or network issue)."
+  echo "[LatexCompileSync] You can push later with sync_to_overleaf.sh."
 fi
 
 echo ""

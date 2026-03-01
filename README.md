@@ -57,6 +57,8 @@ Then install the **LaTeX Workshop** extension, reload the window, and save a `.t
 
 ### Option B: Manual setup
 
+#### 1. Add the scripts and config to your project
+
 Clone or download this repo, then copy the following into your LaTeX project folder:
 
 - The **contents** of `scripts/` → into your project's `scripts/` folder (create it if needed).
