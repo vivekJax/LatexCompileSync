@@ -22,6 +22,7 @@ LatexCompileSync/
 ├── docs/
 │   └── LLM_GUIDE.md          (this file)
 ├── scripts/
+│   ├── setup.sh              → run once per project (one-command setup; preferred for LLMs)
 │   ├── build.sh              → copy to <project>/scripts/build.sh
 │   └── sync_to_overleaf.sh   → copy to <project>/scripts/sync_to_overleaf.sh
 ├── .vscode/
@@ -63,6 +64,35 @@ The **LaTeX project root** is the directory that contains the main `.tex` file a
 
 > **Read this entire section before generating any files.** Several of the
 > bugs below are easy to introduce and hard to diagnose.
+
+### 4.0 Preferred method: one-command setup script
+
+**When the user provides both the Overleaf project URL and the Overleaf Git token**, run the setup script instead of performing the manual steps below. This is faster and avoids common mistakes.
+
+From the **LaTeX project directory** (the folder containing the main `.tex` file), run:
+
+```bash
+bash <(curl -sL https://raw.githubusercontent.com/vivekJax/LatexCompileSync/main/scripts/setup.sh) \
+  --url "https://www.overleaf.com/project/<PROJECT_ID>" \
+  --token "<OVERLEAF_TOKEN>"
+```
+
+If the project directory is elsewhere:
+
+```bash
+bash <(curl -sL https://raw.githubusercontent.com/vivekJax/LatexCompileSync/main/scripts/setup.sh) \
+  --url "https://www.overleaf.com/project/<PROJECT_ID>" \
+  --token "<OVERLEAF_TOKEN>" \
+  --dir "/path/to/latex/project"
+```
+
+The script: extracts the project ID from the URL, auto-detects the main `.tex` file (contains `\documentclass`), creates `scripts/build.sh` and `scripts/sync_to_overleaf.sh`, creates `.env` with credentials and `MAIN_TEX`, creates or merges `.gitignore` and `.vscode/settings.json` / `tasks.json`, runs `git init`, adds the Overleaf remote, fetches and merges existing Overleaf content, and makes scripts executable.
+
+After running, remind the user to install the **LaTeX Workshop** extension and run **Developer: Reload Window**.
+
+**If the user has not provided the token, or the script cannot be run** (e.g. no curl, or running in an environment that cannot execute the script), follow the manual checklist below.
+
+### 4.1 Manual checklist (when not using setup.sh)
 
 1. **Create `scripts/` in the LaTeX project** and add:
    - `build.sh`

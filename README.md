@@ -29,7 +29,33 @@ Setup is a one-time process: copy the scripts and example config into your proje
 
 ## Setup
 
-### 1. Add the scripts and config to your project
+### Option A: One-command setup (recommended)
+
+If you have your **Overleaf project URL** and **Overleaf Git token**, you can set up everything in one step. From your LaTeX project folder (the folder with your `.tex` file), run:
+
+```bash
+bash <(curl -sL https://raw.githubusercontent.com/vivekJax/LatexCompileSync/main/scripts/setup.sh) \
+  --url "https://www.overleaf.com/project/YOUR_PROJECT_ID" \
+  --token "YOUR_OVERLEAF_TOKEN"
+```
+
+Replace `YOUR_PROJECT_ID` with the ID from your Overleaf project URL (e.g. `686be2799dfc5715eab66dfc`) and `YOUR_OVERLEAF_TOKEN` with your token from Overleaf → Account Settings → Git integration.
+
+The script will:
+
+- Detect your main `.tex` file (the one with `\documentclass`)
+- Create `scripts/build.sh` and `scripts/sync_to_overleaf.sh`
+- Create `.env` with your credentials and `MAIN_TEX`
+- Create or update `.gitignore` and `.vscode/settings.json` / `tasks.json`
+- Run `git init`, add the Overleaf remote, and fetch/merge any existing Overleaf content
+
+Then install the **LaTeX Workshop** extension, reload the window, and save a `.tex` file to build and sync.
+
+**To run from a different directory:** add `--dir "/path/to/your/latex/project"` to the command.
+
+---
+
+### Option B: Manual setup
 
 Clone or download this repo, then copy the following into your LaTeX project folder:
 
@@ -42,7 +68,7 @@ Your project should contain at least:
 - `scripts/build.sh` and `scripts/sync_to_overleaf.sh`
 - `.vscode/` with the editor configuration (recommended)
 
-### 2. Configure Overleaf credentials
+#### 2. Configure Overleaf credentials
 
 In your **LaTeX project root** (the same folder as your main `.tex` file), create a file named `.env` and add:
 
@@ -59,7 +85,7 @@ Keep `.env` private: do not commit it to version control. Add `.env` to your pro
 
 If your main file is not `main.tex`, add `MAIN_TEX=yourfile.tex` to `.env`. See [.env.example](.env.example) for other optional variables.
 
-### 3. Connect the project to Overleaf via Git
+#### 3. Connect the project to Overleaf via Git
 
 From your LaTeX project folder in a terminal:
 
@@ -70,7 +96,7 @@ From your LaTeX project folder in a terminal:
 
 **Important:** Overleaf's default branch is `master`. If your local clone is also on `master`, set `OVERLEAF_BRANCH_LOCAL=master` in `.env` (the default is `main`).
 
-### 4. Configure the editor
+#### 4. Configure the editor
 
 1. **Extension** — Install **LaTeX Workshop** (for building the PDF). No other extension is required; sync runs as part of the LaTeX Workshop build recipe.
 
@@ -83,7 +109,7 @@ From your LaTeX project folder in a terminal:
 
 After this, saving a `.tex`, `.sty`, or `.bib` file will build the PDF and then sync to Overleaf automatically.
 
-### 5. Verify
+#### 5. Verify
 
 1. Open your main `.tex` file in VS Code or Cursor.
 2. Make a small edit and save (Ctrl+S / Cmd+S).
@@ -113,6 +139,7 @@ If you see errors about `OVERLEAF_TOKEN` or `OVERLEAF_PROJECT_ID`, verify the `.
 
 | From this repo | To your project |
 |----------------|------------------|
+| `scripts/setup.sh` | Run once to set up a project (Option A above); or copy `build.sh` / `sync_to_overleaf.sh` manually |
 | `scripts/build.sh` | `<project>/scripts/build.sh` |
 | `scripts/sync_to_overleaf.sh` | `<project>/scripts/sync_to_overleaf.sh` |
 | `.vscode/settings.json.example` | `<project>/.vscode/settings.json` (merge keys) |
@@ -133,6 +160,7 @@ If you see errors about `OVERLEAF_TOKEN` or `OVERLEAF_PROJECT_ID`, verify the `.
 
 ### Script behavior
 
+- **scripts/setup.sh** — One-command setup for a new LaTeX project. Run from the project folder (or use `--dir`). Requires `--url` (Overleaf project URL) and `--token` (Overleaf Git token). Detects the main `.tex` file, creates `build.sh` and `sync_to_overleaf.sh`, `.env`, `.gitignore`, `.vscode/` config, inits git, adds the Overleaf remote, and fetches/merges existing Overleaf content. Use this so users and LLMs can set up sync with minimal steps.
 - **scripts/build.sh** — Runs from project root (parent of `scripts/`). Loads `.env`, compiles `MAIN_TEX` with `TEX_ENGINE` (two passes). If `OUTPUT_PDF` is set, copies the resulting PDF to that path. Exits with an error if the main file is missing or the build fails.
 - **scripts/sync_to_overleaf.sh** — Runs from project root. Loads `.env`. If the folder is not a Git repository, exits successfully without action. Otherwise stages all changes (respecting `.gitignore`), commits with message "Auto-sync to Overleaf," and pushes to the Overleaf remote. The token is embedded directly in the push URL (never stored in `.git/config`). Exits with an error if credentials are missing or the push fails.
 
