@@ -24,14 +24,23 @@ Connect the current LaTeX project folder to Overleaf using LatexCompileSync. Sam
 1. Confirm the target directory (workspace folder unless the user specifies another).
 2. Run setup (**never** put the token on the command line or in chat):
 
+Prefer the local clone when present (avoids raw.githubusercontent.com CDN lag):
+
+```bash
+bash "/Users/vkumar/GitHub/LatexCompileSync/scripts/setup.sh" \
+  --url "$OVERLEAF_URL" \
+  --dir "$PROJECT_DIR" \
+  --token-file "/Users/vkumar/Tokens_API_Kumar/Overleaf.txt"
+```
+
+Otherwise:
+
 ```bash
 bash <(curl -sL https://raw.githubusercontent.com/vivekJax/LatexCompileSync/main/scripts/setup.sh) \
   --url "$OVERLEAF_URL" \
   --dir "$PROJECT_DIR" \
   --token-file "/Users/vkumar/Tokens_API_Kumar/Overleaf.txt"
 ```
-
-If you have a local clone of LatexCompileSync, you may run that repo’s `scripts/setup.sh` the same way instead of curling.
 
 3. After success, tell the user:
    - Detected `MAIN_TEX` and branch mapping (`local → remote`)
