@@ -31,27 +31,34 @@ Setup is a one-time process: copy the scripts and example config into your proje
 
 ### Option A: One-command setup (recommended)
 
-If you have your **Overleaf project URL** and **Overleaf Git token**, you can set up everything in one step. From your LaTeX project folder (the folder with your `.tex` file), run:
+From your LaTeX project folder, you only need the **Overleaf project URL**. Prefer a token *file* so the secret is never pasted into chat or shell history:
 
 ```bash
 bash <(curl -sL https://raw.githubusercontent.com/vivekJax/LatexCompileSync/main/scripts/setup.sh) \
   --url "https://www.overleaf.com/project/YOUR_PROJECT_ID" \
-  --token "YOUR_OVERLEAF_TOKEN"
+  --token-file "$HOME/Tokens_API_Kumar/Overleaf.txt"
 ```
 
-Replace `YOUR_PROJECT_ID` with the ID from your Overleaf project URL (e.g. `686be2799dfc5715eab66dfc`) and `YOUR_OVERLEAF_TOKEN` with your token from Overleaf → Account Settings → Git integration.
+If `--token-file` is omitted, `setup.sh` also checks `$OVERLEAF_TOKEN`, `$OVERLEAF_TOKEN_FILE`, then `$HOME/Tokens_API_Kumar/Overleaf.txt` when that file exists. `--token` still works but is not preferred for agents.
 
 The script will:
 
-- Detect your main `.tex` file (the one with `\documentclass`)
+- Fetch Overleaf first, then check out or merge content (empty local folders are supported)
+- Detect your main `.tex` file (the one with `\documentclass`) after the fetch
 - Create `scripts/build.sh` and `scripts/sync_to_overleaf.sh`
-- Create `.env` with your credentials and `MAIN_TEX`
+- Create `.env` with credentials, `MAIN_TEX`, and `OVERLEAF_BRANCH_LOCAL=master` (Overleaf's branch)
 - Create or update `.gitignore` and `.vscode/settings.json` / `tasks.json`
-- Run `git init`, add the Overleaf remote, and fetch/merge any existing Overleaf content
+- Move conflicting local paths to `.latexcompilesync_backup/` when needed
 
 Then install the **LaTeX Workshop** extension, reload the window, and save a `.tex` file to build and sync.
 
 **To run from a different directory:** add `--dir "/path/to/your/latex/project"` to the command.
+
+### Cursor / Claude agents
+
+In Cursor or Claude, say: "Connect this folder to https://www.overleaf.com/project/..."
+
+Agents should use the `overleaf-connect` skill (see `skills/overleaf-connect/SKILL.md`) and run `setup.sh` with `--url`, `--dir`, and `--token-file` — never paste the token into the chat. Details: [docs/LLM_GUIDE.md](docs/LLM_GUIDE.md).
 
 ---
 

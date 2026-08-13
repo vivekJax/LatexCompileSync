@@ -21,8 +21,10 @@ LatexCompileSync/
 ├── README.md
 ├── docs/
 │   └── LLM_GUIDE.md          (this file)
+├── skills/
+│   └── overleaf-connect/     → install into Cursor + Claude skill trees
 ├── scripts/
-│   ├── setup.sh              → run once per project (one-command setup; preferred for LLMs)
+│   ├── setup.sh              → run once per project (one-command setup; preferred for agents)
 │   ├── build.sh              → copy to <project>/scripts/build.sh
 │   └── sync_to_overleaf.sh   → copy to <project>/scripts/sync_to_overleaf.sh
 ├── .vscode/
@@ -54,7 +56,7 @@ The **LaTeX project root** is the directory that contains the main `.tex` file a
 - **Environment / .env** (required for push):
   - `OVERLEAF_PROJECT_ID` — Overleaf project ID (from URL `https://www.overleaf.com/project/<ID>`).
   - `OVERLEAF_TOKEN` — Overleaf Git token (from Account Settings → Git integration).
-  - Optional: `OVERLEAF_BRANCH_LOCAL` (default: `main`), `OVERLEAF_BRANCH_REMOTE` (default: `master`).
+  - Optional: `OVERLEAF_BRANCH_LOCAL` (default: `main`; **setup.sh sets `master` after Overleaf fetch**), `OVERLEAF_BRANCH_REMOTE` (default: `master`).
 - **Behavior**: If not in a git repo, exits 0. Otherwise loads `.env`, stages all changes (respecting `.gitignore`), commits with message `"Auto-sync to Overleaf"`, and pushes. The token is embedded directly in the push URL and **never stored** in `.git/config`. Exits non-zero if token/ID missing or push fails.
 - **Important**: The **user's** LaTeX project must already have `git init` and `git remote add origin https://git.overleaf.com/<OVERLEAF_PROJECT_ID>`. This repo does not create the Overleaf project or remote.
 
@@ -65,32 +67,41 @@ The **LaTeX project root** is the directory that contains the main `.tex` file a
 > **Read this entire section before generating any files.** Several of the
 > bugs below are easy to introduce and hard to diagnose.
 
-### 4.0 Preferred method: one-command setup script
+### 4.0 Preferred method: one-command setup (Cursor + Claude)
 
-**When the user provides both the Overleaf project URL and the Overleaf Git token**, run the setup script instead of performing the manual steps below. This is faster and avoids common mistakes.
+**When the user provides an Overleaf project URL**, run `setup.sh`. Do **not** ask them to paste the Git token into chat if a token file exists.
 
-From the **LaTeX project directory** (the folder containing the main `.tex` file), run:
+Preferred invoke (token file — works for Cursor and Claude agents):
 
 ```bash
 bash <(curl -sL https://raw.githubusercontent.com/vivekJax/LatexCompileSync/main/scripts/setup.sh) \
   --url "https://www.overleaf.com/project/<PROJECT_ID>" \
-  --token "<OVERLEAF_TOKEN>"
+  --dir "/path/to/latex/project" \
+  --token-file "$HOME/Tokens_API_Kumar/Overleaf.txt"
 ```
 
-If the project directory is elsewhere:
+URL-only also works when `$HOME/Tokens_API_Kumar/Overleaf.txt` exists (or `$OVERLEAF_TOKEN` / `$OVERLEAF_TOKEN_FILE` is set):
 
 ```bash
 bash <(curl -sL https://raw.githubusercontent.com/vivekJax/LatexCompileSync/main/scripts/setup.sh) \
   --url "https://www.overleaf.com/project/<PROJECT_ID>" \
-  --token "<OVERLEAF_TOKEN>" \
   --dir "/path/to/latex/project"
 ```
 
-The script: extracts the project ID from the URL, auto-detects the main `.tex` file (contains `\documentclass`), creates `scripts/build.sh` and `scripts/sync_to_overleaf.sh`, creates `.env` with credentials and `MAIN_TEX`, creates or merges `.gitignore` and `.vscode/settings.json` / `tasks.json`, runs `git init`, adds the Overleaf remote, fetches and merges existing Overleaf content, and makes scripts executable.
+What the script does (order matters):
 
-After running, remind the user to install the **LaTeX Workshop** extension and run **Developer: Reload Window**.
+1. Resolves the token (`--token` → `--token-file` → `$OVERLEAF_TOKEN` → `$OVERLEAF_TOKEN_FILE` → default token file).
+2. `git init` (branch `master`) and adds the Overleaf remote **without** embedding the token in `.git/config`.
+3. Fetches Overleaf `master`. If the local repo has no commits, backs up conflicting untracked paths to `.latexcompilesync_backup/` and **checks out** `FETCH_HEAD` (avoids merge failures on empty folders).
+4. Detects `MAIN_TEX` **after** checkout/merge.
+5. Writes `.env` with `MAIN_TEX`, `OVERLEAF_BRANCH_LOCAL`, `OVERLEAF_BRANCH_REMOTE` (typically both `master`).
+6. Installs `scripts/build.sh` / `sync_to_overleaf.sh` and merges LaTeX Workshop "Build and Sync" settings.
 
-**If the user has not provided the token, or the script cannot be run** (e.g. no curl, or running in an environment that cannot execute the script), follow the manual checklist below.
+After running: report `MAIN_TEX` and branches; remind **LaTeX Workshop** + **Developer: Reload Window**. Never print the token. Never commit `.env`.
+
+Use the shared skill `skills/overleaf-connect/SKILL.md` (installed under both `~/.cursor/skills` and `~/.claude/skills`).
+
+**If no token file / env token is available**, ask for `--token-file` path or follow the manual checklist below — do not invent credentials.
 
 ### 4.1 Manual checklist (when not using setup.sh)
 
@@ -285,3 +296,15 @@ With that, **nothing from the LatexCompileSync repo itself** (no separate repo m
 - Overleaf project URL → project ID: `https://www.overleaf.com/project/<OVERLEAF_PROJECT_ID>`
 - LaTeX Workshop extension: [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=James-Yu.latex-workshop)
 - Run on Save extension (optional): [emeraldwalk.RunOnSave](https://marketplace.visualstudio.com/items?itemName=emeraldwalk.RunOnSave)
+
+### 5.6 Empty local folder + existing Overleaf content
+
+**Problem**: Writing `.gitignore` / scripts before fetching Overleaf left untracked files that blocked `git merge` / checkout (`untracked working tree file would be overwritten`).
+
+**Fix**: `setup.sh` now fetches Overleaf first. For repos with no commits it backs up conflicts to `.latexcompilesync_backup/` and checks out `FETCH_HEAD` as `master`, then detects `MAIN_TEX` and writes `.env`.
+
+### 5.7 Token on the command line
+
+**Problem**: `--token` with a raw token lands in shell history and agent transcripts; approval systems also flag it.
+
+**Fix**: Prefer `--token-file` or the default `$HOME/Tokens_API_Kumar/Overleaf.txt`. Agents must not paste token contents into chat.
